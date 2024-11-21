@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Analyzer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Resume Analyzer</h1>
+    <textarea id="jsonInput" placeholder='Enter JSON (e.g., {"data": ["1", "a", "b"], "user_id": "john_doe", "email": "john@example.com", "roll_number": "ABCD123"})'></textarea>
+    <inputtype="file" id="fileInput" />
+    <button id="submitBtn">Submit</button>
+
+    <div id="responseSection" style="display: none;">
+      <h2>Response:</h2>
+      <pre id="response"></pre>
+    </div>
+
+    <!-- Firebase SDKs as ES Modules -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+      import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+      // Firebase Configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyDCfs2YWuaVF1W97hafS1R_IP5d5l2SX0s",
+        authDomain: "number-31547.firebaseapp.com",
+        projectId: "number-31547",
+        storageBucket: "number-31547.appspot.com",
+        messagingSenderId: "657095757747",
+        appId: "1:657095757747:web:22221c4295564db51b45c6",
+        measurementId: "G-KMS8JZWGCQ"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      // Collect user input and send POST request
+      document.getElementById("submitBtn").addEventListener("click", async () => {
+        const jsonInput = document.getElementById("jsonInput").value;
+        const fileInput = document.getElementById("fileInput").files[0];
+
+        try {
+          // Parse user input JSON
+          const parsedInput = JSON.parse(jsonInput);
+
+          // Handle file as Base64 if provided
+          let file_b64 = null;
+          if (fileInput) {
+            const reader = new FileReader();
+            reader.onload = async function () {
+              file_b64 = reader.result.split(",")[1];
+
+              // Send POST request to the REST API
+              const response = await fetch("http://localhost:5000/bfhl", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  ...parsedInput,
+                  file_b64,
+                }),
+              });
+
+              const data = await response.json();
+
+              // Display response on the web page
+              document.getElementById("responseSection").style.display = "block";
+              document.getElementById("response").textContent = JSON.stringify(data, null, 2);
+
+              // Store response in Firebase Firestore
+              await addDoc(collection(db, "responses"), data);
+              alert("Response stored in Firebase successfully!");
+            };
+            reader.readAsDataURL(fileInput);
+          } else {
+            alert("Please upload a file.");
+          }
+        } catch (error) {
+          alert("Invalid input or server error.");
+        }
+      });
+    </script>
+  </div>
+</body>
+</html>
